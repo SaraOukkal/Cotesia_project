@@ -1,0 +1,68 @@
+#Commande :
+#conda activate /beegfs/data/bguinet/Bguinet_conda/
+
+import pandas as pd
+import re
+import os
+
+##DRY run :
+#nohup snakemake -j 500  -s Snakemake_BUSCO_Quast -n --cluster " sbatch -J {params.name} -t {params.time} --mem {params.mem} --cpus-per-task {params.threads} -o {params.out} -e {params.err} --qos=horizon --exclude=pbil-cloud2 " &> nohup_Snakemake_BUSCO_Quast.out &
+##Unlock :
+#nohup snakemake -j 500  -s Snakemake_BUSCO_Quast --unlock --cluster " sbatch -J {params.name} -t {params.time} --mem {params.mem} --cpus-per-task {params.threads} -o {params.out} -e {params.err} --qos=horizon --exclude=pbil-cloud2 " &> nohup_Snakemake_BUSCO_Quast.out &
+##Real run :
+#nohup snakemake -j 500  -s Snakemake_BUSCO_Quast --cluster " sbatch -J {params.name} -t {params.time} --mem {params.mem} --cpus-per-task {params.threads} -o {params.out} -e {params.err} --qos=horizon --exclude=pbil-cloud2 " &> nohup_Snakemake_BUSCO_Quast.out &
+
+#Your paths
+Genomes_path="/beegfs/data/soukkal/Thesis/Cotesia_project/data/Genomes/"
+Output_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/results/"
+Logs_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/results/Logs/"
+
+#Open species list :
+Genome_IDS_table=pd.read_csv("/beegfs/data/soukkal/Thesis/Cotesia_project/data/Genomes_list.txt",header=None)
+list_Genome_IDs=list(Genome_IDS_table[0])
+
+rule all:
+  input:
+        expand(Output_dir+"BUSCO/{Genome_ID}/run_hymenoptera_odb10/full_table.tsv", Genome_ID = list_Genome_IDs),
+        expand(Output_dir+"Quast/{Genome_ID}/report.tsv", Genome_ID = list_Genome_IDs)
+
+#Run BUSCO analysis:
+rule BUSCO:
+  params:
+     threads="12",
+     time="18:00:00",
+     mem="12G",
+     name="BUSCO_{Genome_ID}",
+     out=Logs_dir+"BUSCO/{Genome_ID}.out",
+     err=Logs_dir+"BUSCO/{Genome_ID}.error",
+     lineage="/beegfs/data/soukkal/StageM2/Hymenoptera_genomes/results/Stat_Results/GCA_001855655.1/busco_downloads/lineages/hymenoptera_odb10",
+     mode="genome"
+  input:
+     Assembly=Genomes_path+"{Genome_ID}.fasta"
+  output:
+     Result=Output_dir+"BUSCO/{Genome_ID}/run_hymenoptera_odb10/full_table.tsv"
+  shell:
+     """
+      hostname
+      cd /beegfs/data/soukkal/Thesis/Cotesia_project/results/BUSCO/
+      /beegfs/data/soft/singularity3.11.0/bin/singularity exec --bind /beegfs/:/beegfs/ /beegfs/data/soft/containers/busco-v5.4.5.sif busco -i {input.Assembly} -l {params.lineage} -m {params.mode} -o {wildcards.Genome_ID}/ -c 3 -f
+     """
+
+#Run QUAST analysis:
+rule QUAST:
+  params:
+     threads="5",
+     time="00:40:00",
+     mem="2000M",
+     name="QUAST_{Genome_ID}",
+     out=Logs_dir+"Quast/{Genome_ID}.out",
+     err=Logs_dir+"Quast/{Genome_ID}.error"
+  input:
+     Assembly=Genomes_path+"{Genome_ID}.fasta"
+  output:
+     Result=Output_dir+"Quast/{Genome_ID}/report.tsv"
+  shell:
+     """
+     python3 /beegfs/data/soukkal/StageM2/Tools/quast/quast.py {input.Assembly} -o {Output_dir}Quast/{wildcards.Genome_ID}/ -t {params.threads}
+     cp {Output_dir}Quast/{wildcards.Genome_ID}/report.tsv {Output_dir}Quast/Quast_sum/report_{wildcards.Genome_ID}.tsv
+     """
