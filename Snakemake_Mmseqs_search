@@ -1,0 +1,97 @@
+#Activate conda :
+## conda activate /beegfs/data/bguinet/Bguinet_conda
+
+#Import python packages :
+import pandas as pd
+import re
+import os
+
+#Command lines :
+##DRY run :
+#nohup snakemake -j 200  -s Snakemake_Mmseqs_search -n --cluster " sbatch -J {params.name} -t {params.time} --mem {params.mem} --cpus-per-task {params.threads} -o {params.out} -e {params.err} --qos=horizon --constraint=haswell --exclude=pbil-deb27 " &> nohup_Snakemake_Mmseqs_search.out &
+##Unlock :
+#nohup snakemake -j 200  -s Snakemake_Mmseqs_search --unlock --cluster " sbatch -J {params.name} -t {params.time} --mem {params.mem} --cpus-per-task {params.threads} -o {params.out} -e {params.err} --qos=horizon ---constraint=haswell --exclude=pbil-deb27 " &> nohup_Snakemake_Mmseqs_search.out &
+##Real run :
+#nohup snakemake -j 200  -s Snakemake_Mmseqs_search --cluster " sbatch -J {params.name} -t {params.time} --mem {params.mem} --cpus-per-task {params.threads} -o {params.out} -e {params.err} --qos=horizon --constraint=haswell --exclude=pbil-deb27 " &> nohup_Snakemake_Mmseqs_search.out &
+
+#Software :
+mmseqs2="/beegfs/data/soukkal/TOOLS/mmseqs/bin/mmseqs" #(version 5daca424b162cc5fdf0b9cd151aebed86975cbf6)
+
+#Data pathways :
+Genomes_paths="/beegfs/data/soukkal/Thesis/Cotesia_project/data/Genomes/"
+Output_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/results/Homology_search/"
+Logs_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/results/Logs/Mmseqs/"
+Scripts_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/scripts/"
+DB_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/data/"
+
+#Liste d'espèces :
+Genome_IDS_table=pd.read_csv("/beegfs/data/soukkal/Thesis/Cotesia_project/data/Genomes_list.txt",header=None)
+list_Genome_IDs=list(Genome_IDS_table[0])
+
+#Liste de BDD à créer :
+Types=["Circles","Segments","Genes"]
+
+rule all:
+        input:
+                expand(DB_dir+"{Type}/{Type}_BDD", Type = Types),
+                expand(Output_dir+"{Genome_ID}/{Genome_ID}_mmseqs2_db", Genome_ID = list_Genome_IDs),
+                expand(Output_dir+"{Genome_ID}/{Type}/run_mmseqs2/result_mmseqs2.m8", Genome_ID = list_Genome_IDs, Type = Types)
+
+rule Create_db_Motif:
+        params:
+                threads="1",
+                time="00:10:00",
+                name="CreateDB_{Type}",
+                mem="2000M",
+                out=Logs_dir+"CreateDB_{Type}.out",
+                err=Logs_dir+"CreateDB_{Type}.error"
+        input:
+                DB=DB_dir+"{Type}/{Type}_BDD.fasta"
+        output:
+                Mmseqs_DB=DB_dir+"{Type}/{Type}_BDD"
+        shell:
+                """
+                {mmseqs2} createdb {DB_dir}{wildcards.Type}/{wildcards.Type}_BDD.fasta {DB_dir}{wildcards.Type}/{wildcards.Type}_BDD
+                """
+
+rule Create_db_Genome:
+        params:
+                threads="1",
+                time="00:10:00",
+                name="CreateDB_{Genome_ID}",
+                mem="2000M",
+                out=Logs_dir+"CreateDB_{Genome_ID}.out",
+                err=Logs_dir+"CreateDB_{Genome_ID}.error"
+        input:
+                Genome=Genomes_paths+"{Genome_ID}.fasta"
+        output:
+                Mmseqs_DB=Output_dir+"{Genome_ID}/{Genome_ID}_mmseqs2_db"
+        shell:
+                """
+                #Create a directory where the results will be written
+                mkdir -p {Output_dir}{wildcards.Genome_ID}/
+                {mmseqs2} createdb {input.Genome} {Output_dir}{wildcards.Genome_ID}/{wildcards.Genome_ID}_mmseqs2_db
+                """
+
+rule Homology_analysis:
+        params:
+                threads="4",
+                time="01:00:00",
+                mem="2G",
+                name="Mmseqs2_{Genome_ID}_{Type}",
+                out=Logs_dir+"{Genome_ID}_{Type}_Mmseqs_search.out",
+                err=Logs_dir+"{Genome_ID}_{Type}_Mmseqs_search.error"
+        input:
+                Mmseqs_DB=DB_dir+"{Type}/{Type}_BDD",
+                Mmseqs_Genome=Output_dir+"{Genome_ID}/{Genome_ID}_mmseqs2_db"
+        output:
+                out=Output_dir+"{Genome_ID}/{Type}/run_mmseqs2/result_mmseqs2.m8"
+        shell:
+                """
+                #Create a directory where the results will be written
+                mkdir -p {Output_dir}{wildcards.Genome_ID}/{wildcards.Type}/run_mmseqs2/
+                #Run mmseqs search
+                {mmseqs2} search {DB_dir}{wildcards.Type}/{wildcards.Type}_BDD {Output_dir}{wildcards.Genome_ID}/{wildcards.Genome_ID}_mmseqs2_db {Output_dir}{wildcards.Genome_ID}/{wildcards.Type}/run_mmseqs2/result_mmseqs2 {Output_dir}{wildcards.Genome_ID}/{wildcards.Type}/run_mmseqs2/tpm -a -s 7.5 -e 0.01  --search-type 3 --threads 4 --remove-tmp-files
+                #From the previous step you get one result file per thread, the next step will format the result column and also put together all the results in one file:
+                {mmseqs2} convertalis --format-output 'query,qlen,tlen,target,pident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,qaln,tcov' {DB_dir}{wildcards.Type}/{wildcards.Type}_BDD {Output_dir}{wildcards.Genome_ID}/{wildcards.Genome_ID}_mmseqs2_db {Output_dir}{wildcards.Genome_ID}/{wildcards.Type}/run_mmseqs2/result_mmseqs2 {Output_dir}{wildcards.Genome_ID}/{wildcards.Type}/run_mmseqs2/result_mmseqs2.m8 --search-type 3
+                """

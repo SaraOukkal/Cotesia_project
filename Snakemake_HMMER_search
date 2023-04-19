@@ -1,0 +1,97 @@
+#Activate conda :
+## conda activate /beegfs/data/bguinet/Bguinet_conda
+
+#Import python packages :
+import pandas as pd
+import re
+import os
+
+#Command lines :
+##DRY run :
+#nohup snakemake -j 200  -s Snakemake_HMMER_search -n --cluster " sbatch -J {params.name} -t {params.time} --mem {params.mem} --cpus-per-task {params.threads} -o {params.out} -e {params.err} --qos=horizon --constraint=haswell --exclude=pbil-deb27 " &> nohup_Snakemake_HMMER_search.out &
+##Unlock :
+#nohup snakemake -j 200  -s Snakemake_HMMER_search --unlock --cluster " sbatch -J {params.name} -t {params.time} --mem {params.mem} --cpus-per-task {params.threads} -o {params.out} -e {params.err} --qos=horizon ---constraint=haswell --exclude=pbil-deb27 " &> nohup_Snakemake_HMMER_search.out &
+##Real run :
+#nohup snakemake -j 200  -s Snakemake_HMMER_search --cluster " sbatch -J {params.name} -t {params.time} --mem {params.mem} --cpus-per-task {params.threads} -o {params.out} -e {params.err} --qos=horizon --constraint=haswell --exclude=pbil-deb27 " &> nohup_Snakemake_HMMER_search.out &
+
+#Software :
+Clustal_Omega="/beegfs/home/soukkal/miniconda3/bin/clustalo"
+HMMbuild="/beegfs/home/soukkal/miniconda3/bin/hmmbuild"
+nHMMER="/beegfs/home/soukkal/miniconda3/bin/nhmmer"
+
+#Data pathways :
+Genomes_paths="/beegfs/data/soukkal/Thesis/Cotesia_project/data/Genomes/"
+Output_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/results/HMM_search/"
+Logs_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/results/Logs/HMMER/"
+Scripts_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/scripts/"
+DB_dir="/beegfs/data/soukkal/Thesis/Cotesia_project/data/"
+
+#Liste d'espèces :
+Genome_IDS_table=pd.read_csv("/beegfs/data/soukkal/Thesis/Cotesia_project/data/Genomes_list.txt",header=None)
+list_Genome_IDs=list(Genome_IDS_table[0])
+
+#Liste de BDD :
+Motifs=["DRJ3","DRJ5","HIM","Type1head","Type1tail","Type2head","Type2tail"]
+
+rule all:
+        input:
+                expand(Output_dir+"Alignement/{Motif}_alignement.sto", Motif = Motifs),
+                expand(Output_dir+"Profile/{Motif}.hmm", Motif = Motifs),
+                expand(Output_dir+"Search/{Genome_ID}_{Motif}_HMMsearch.out", Genome_ID = list_Genome_IDs, Motif = Motifs)
+
+#Alignement multiple des motifs, choix de l'output en format stockholm car prit en charge par Hmmbuild : (Clustal Omega)
+rule Alignement:
+        params:
+                threads="4",
+                time="01:00:00",
+                mem="2000M",
+                name="Ali_{Motif}",
+                out=Logs_dir+"{Motif}_Ali.out",
+                err=Logs_dir+"{Motif}_Ali.error"
+        input:
+                Pattern=DB_dir+"{Motif}/{Motif}_BDD.fasta"
+        output:
+                out=Output_dir+"Alignement/{Motif}_alignement.sto"
+        shell:
+                """
+                {Clustal_Omega} -v -i {input.Pattern} --out {output.out} --threads {params.threads} --outfmt=st -t DNA
+                """
+
+#Build HMM profiles
+##Format :  hmmbuild [options] <hmmfile_out> <msafile>
+rule HMM_profiles:
+        params:
+                threads="4",
+                time="01:00:00",
+                mem="2000M",
+                name="HMMbuild_{Motif}",
+                out=Logs_dir+"{Motif}_HMMbuild.out",
+                err=Logs_dir+"{Motif}_HMMbuild.error"
+        input:
+                Ali=Output_dir+"Alignement/{Motif}_alignement.sto"
+        output:
+                out=Output_dir+"Profile/{Motif}.hmm"
+        shell:
+                """
+                {HMMbuild} --dna --cpu 4 {output.out} {input.Ali}
+                """
+
+#Search HMM profiles in genomes
+rule HMM_search:
+        params:
+                threads="6",
+                time="01:00:00",
+                mem="2000M",
+                name="HMMsearch_{Motif}_{Genome_ID}",
+                out=Logs_dir+"{Genome_ID}_{Motif}_HMMsearch.out",
+                err=Logs_dir+"{Genome_ID}_{Motif}_HMMsearch.error"
+        input:
+                Profile=Output_dir+"Profile/{Motif}.hmm",
+                Genome=Genomes_paths+"{Genome_ID}.fasta"
+        output:
+                out=Output_dir+"Search/{Genome_ID}_{Motif}_HMMsearch.out"
+        shell:
+                """
+               {nHMMER} --dna --cpu 6 {input.Profile} {input.Genome} > {output.out}
+                """
+
