@@ -1,4 +1,4 @@
-README
+**README**
 
 # Project Overview
 
@@ -31,6 +31,7 @@ Objective: Reconstruct the phylogeny of Cotesia species to identify the closest 
 Phylogenetic relationships were inferred from BUSCO genes. A subset of 350 BUSCO genes was used, with sequences aligned, concatenated, and analyzed to construct the phylogenetic tree. Details on the script usage are provided in the respective sections.
 
 **Scripts:**
+
 BUSCO_phylogeny_choose_genes.sh selects 350 BUSCO genes that are complete in all species for phylogenetic analysis.
 
 Snakemake_BUSCO_phylogeny performs the alignment of genes using Clustal Omega, concatenates them into a supergene, creates a partition file using catfasta2phyml.pl, and infers the phylogenetic tree with IQ-TREE.
@@ -43,6 +44,7 @@ Objective: Ensure the reliability and quality of genomic data.
 The quality of genomic data was assessed using QUAST v5.0.2 for alignment metrics and BUSCO v5.4.5 for conserved gene completeness. Results were consolidated into summary tables using the scripts mentioned above.
 
 **Scripts:**
+
 Snakemake_BUSCO_Quast assesses the quality of genomes using QUAST and BUSCO.
 
 Regroup_BUSCO.sh consolidates BUSCO results from all species into a single table.
@@ -55,12 +57,14 @@ Regroup_Quast.sh aggregates QUAST results from all species into a single table.
 Objective: Detect homologies between circles and proviral segments using CDS.
 
 **Scripts:**
+
 Snakemake_Mmseqs_search performs homology searches with MMseqs2.
 
 ### Conserved patterns homology search
 Objective: Search for conserved motifs within the Cotesia icipe genome.
 
 **Scripts:**
+
 Snakemake_HMMER_search aligns the motifs, builds HMM profiles, and searches for these profiles in the Cotesia icipe genome.
 
 
@@ -73,18 +77,13 @@ Cotesia congregata, Cotesia typhae, Cotesia sesamiae (Provided by Clément Gilbe
 Cotesia rubecula, Cotesia flavipes, Cotesia glomerata, Cotesia vestalis, Cotesia chilonis (NCBI)
 Cotesia whitfield24, Cotesia whitfield28, Cotesia whitfield31, Cotesia whitfield77 (Horizon Project)
 
-
 Circles: Espagne et al. (2004)
-
 
 Segments: Bézier et al. (2013)
 
-
 Segments CDS: Espagne et al. (2004)
 
-
 DRJ/HIM: Provided by Clément
-
 
 Amplification Motifs: Gauthier et al. (2021)
 
