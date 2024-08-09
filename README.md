@@ -47,7 +47,7 @@ The quality of genomic data was assessed using QUAST v5.0.2 for alignment metric
 
 Snakemake_BUSCO_Quast assesses the quality of genomes using QUAST and BUSCO.
 
-Regroup_BUSCO.sh consolidates BUSCO results from all species into a single table.
+Regroup_BUSCO.sh aggregates BUSCO results from all species into a single table.
 
 Regroup_Quast.sh aggregates QUAST results from all species into a single table.
 
