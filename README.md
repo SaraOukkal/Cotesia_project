@@ -7,7 +7,10 @@ This repository contains the scripts and methods used to annotate the proviral s
 # Materials and Methods
 
 ## Data Acquisition
-The data for this project includes genome assemblies from various Cotesia species and specific Bracovirus datasets. To annotate the proviral segments of Cotesia icipe Bracovirus (CiBV), the following steps were undertaken:
+
+To annotate the proviral segments of Cotesia icipe Bracovirus (CiBV), we first aimed to reconstruct the phylogeny of Cotesia species to identify the closest relatives that would be most useful for annotation through homology. We integrated genome assemblies from all available Cotesia species on NCBI and the Horizon project dataset. This comprehensive phylogenetic analysis revealed that Cotesia whitfield species and Cotesia congregata were the closest relatives to Cotesia icipe.
+
+Given that among these, only Cotesia congregata has high-quality annotation for its Bracovirus (CcBV), we used its data for circles, proviral segments, and proviral segment genes. For conserved motifs like DRJ and HIM, a broader approach was taken, including DRJ and HIM motifs from Cotesia congregata (CcBV), Cotesia typhae (CtBV), and Cotesia sesamiae (CsBV). For amplification motifs, only data from CcBV were used. This combination of data from multiple Bracoviruses enhanced the robustness of the analysis.
 
 **Collected Data**
 
@@ -25,19 +28,6 @@ HIM: CcBV, CtBV, CsBV
 
 Amplification Motifs: CcBV
 
-## Phylogenetic Analysis
-Objective: Reconstruct the phylogeny of Cotesia species to identify the closest relatives useful for annotation through homology.
-
-Phylogenetic relationships were inferred from BUSCO genes. A subset of 350 BUSCO genes was used, with sequences aligned, concatenated, and analyzed to construct the phylogenetic tree. Details on the script usage are provided in the respective sections.
-
-**Scripts:**
-
-BUSCO_phylogeny_choose_genes.sh selects 350 BUSCO genes that are complete in all species for phylogenetic analysis.
-
-Snakemake_BUSCO_phylogeny performs the alignment of genes using Clustal Omega, concatenates them into a supergene, creates a partition file using catfasta2phyml.pl, and infers the phylogenetic tree with IQ-TREE.
-
-catfasta2phyml.pl is used to create the partition file for the IQ-TREE analysis.
-
 ## Genome Quality Control
 Objective: Ensure the reliability and quality of genomic data.
 
@@ -51,7 +41,24 @@ Regroup_BUSCO.sh aggregates BUSCO results from all species into a single table.
 
 Regroup_Quast.sh aggregates QUAST results from all species into a single table.
 
+## Phylogenetic Analysis
+Objective: Reconstruct the phylogeny of Cotesia species to identify the closest relatives useful for annotation through homology.
+
+Phylogenetic relationships were inferred from BUSCO genes. A subset of 350 BUSCO genes was used, with sequences aligned, concatenated, and analyzed to construct the phylogenetic tree. Details on the script usage are provided in the respective sections.
+
+**Scripts:**
+
+BUSCO_phylogeny_choose_genes.sh selects 350 BUSCO genes that are complete in all species for phylogenetic analysis.
+
+Snakemake_BUSCO_phylogeny performs the alignment of genes using Clustal Omega, concatenates them into a supergene, creates a partition file using catfasta2phyml.pl, and infers the phylogenetic tree with IQ-TREE.
+
+catfasta2phyml.pl is used to create the partition file for the IQ-TREE analysis.
+
 ## Annotation of CiBV segments
+
+CDS Homology Search: proviral genes were detected using CDS data from circles and proviral segments of CcBV.
+Conserved patterns homology search: Conserved motifs (DRJ, HIM, amplification motifs) were identified using HMM profiles created from multiple Cotesia species data.
+Integration of Results: Gene clusters and motif presence were used together to annotate the proviral segments, with segment orientation determined by DRJ motifs.
 
 ### CDS Homology Search 
 Objective: Detect homologies between circles and proviral segments using CDS.
